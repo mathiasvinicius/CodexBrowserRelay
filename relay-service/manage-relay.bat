@@ -25,7 +25,6 @@ echo Service folder : %SCRIPT_DIR%
 echo Host           : %CODEX_BROWSER_RELAY_HOST%
 echo Port           : %CODEX_BROWSER_RELAY_PORT%
 echo State file     : %CODEX_BROWSER_RELAY_STATE_FILE%
-echo Token          : %CODEX_BROWSER_RELAY_TOKEN%
 echo.
 call :print_running_state
 echo.
@@ -95,12 +94,6 @@ set "INPUT_STATE_FILE="
 set /p "INPUT_STATE_FILE=State file [%CODEX_BROWSER_RELAY_STATE_FILE%]: "
 if not "%INPUT_STATE_FILE%"=="" set "CODEX_BROWSER_RELAY_STATE_FILE=%INPUT_STATE_FILE%"
 
-echo.
-echo Current token: %CODEX_BROWSER_RELAY_TOKEN%
-set "REGEN_TOKEN="
-set /p "REGEN_TOKEN=Generate a new token? [y/N]: "
-if /I "%REGEN_TOKEN%"=="Y" call :generate_token
-
 call :save_config
 echo.
 echo Configuration saved to:
@@ -117,7 +110,6 @@ echo.
 pushd "%SCRIPT_DIR%"
 set "CODEX_BROWSER_RELAY_HOST=%CODEX_BROWSER_RELAY_HOST%"
 set "CODEX_BROWSER_RELAY_PORT=%CODEX_BROWSER_RELAY_PORT%"
-set "CODEX_BROWSER_RELAY_TOKEN=%CODEX_BROWSER_RELAY_TOKEN%"
 set "CODEX_BROWSER_RELAY_STATE_FILE=%CODEX_BROWSER_RELAY_STATE_FILE%"
 node ".\src\cli.js" start
 set "START_EXIT=%ERRORLEVEL%"
@@ -142,7 +134,6 @@ del /q "%STDOUT_LOG%" "%STDERR_LOG%" 2>nul
 echo Starting relay in background...
 set "PS_SCRIPT=$env:CODEX_BROWSER_RELAY_HOST='%CODEX_BROWSER_RELAY_HOST%';"
 set "PS_SCRIPT=%PS_SCRIPT% $env:CODEX_BROWSER_RELAY_PORT='%CODEX_BROWSER_RELAY_PORT%';"
-set "PS_SCRIPT=%PS_SCRIPT% $env:CODEX_BROWSER_RELAY_TOKEN='%CODEX_BROWSER_RELAY_TOKEN%';"
 set "PS_SCRIPT=%PS_SCRIPT% $env:CODEX_BROWSER_RELAY_STATE_FILE='%CODEX_BROWSER_RELAY_STATE_FILE%';"
 set "PS_SCRIPT=%PS_SCRIPT% $p = Start-Process -FilePath 'node' -ArgumentList @('.\src\cli.js','start') -WorkingDirectory '%SCRIPT_DIR%' -RedirectStandardOutput '%STDOUT_LOG%' -RedirectStandardError '%STDERR_LOG%' -PassThru;"
 set "PS_SCRIPT=%PS_SCRIPT% Set-Content -Path '%PID_FILE%' -Value $p.Id"
@@ -295,7 +286,6 @@ if exist "%CONFIG_FILE%" goto :eof
 set "CODEX_BROWSER_RELAY_HOST=127.0.0.1"
 set "CODEX_BROWSER_RELAY_PORT=18793"
 set "CODEX_BROWSER_RELAY_STATE_FILE=%RUNTIME_DIR%\relay-state.json"
-call :generate_token
 call :save_config
 goto :eof
 
@@ -308,13 +298,8 @@ goto :eof
   echo @echo off
   echo set "CODEX_BROWSER_RELAY_HOST=%CODEX_BROWSER_RELAY_HOST%"
   echo set "CODEX_BROWSER_RELAY_PORT=%CODEX_BROWSER_RELAY_PORT%"
-  echo set "CODEX_BROWSER_RELAY_TOKEN=%CODEX_BROWSER_RELAY_TOKEN%"
   echo set "CODEX_BROWSER_RELAY_STATE_FILE=%CODEX_BROWSER_RELAY_STATE_FILE%"
 ) > "%CONFIG_FILE%"
-goto :eof
-
-:generate_token
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "[guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')"` ) do set "CODEX_BROWSER_RELAY_TOKEN=%%I"
 goto :eof
 
 :end

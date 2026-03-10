@@ -9,11 +9,12 @@ Use the local relay instead of Playwright when the user wants to work with an al
 
 ## Quick workflow
 
-1. Confirm the relay is up by reading `C:\ProgramData\AMTECH\codex-browser-relay-service\runtime\relay-state.json`.
+1. Confirm the relay is up by reading `%USERPROFILE%\.codex\codex-browser-relay\relay-service\runtime\relay-state.json`.
 2. Use `scripts/list_pages.ps1` to confirm the extension is connected and a page is attached.
 3. If no page is attached, tell the user to:
    - reload the extension in `edge://extensions`
    - click the extension icon on the target tab until it shows `ON`
+   - confirm the unpacked extension was loaded from `%USERPROFILE%\.codex\codex-browser-relay\extension`
 4. Use `scripts/page_command.ps1` for live interaction.
 
 ## Supported page actions
@@ -95,6 +96,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/page_command.ps1 -Ac
 ## Notes
 
 - Prefer this skill for tabs that are already open and visible in the user's browser.
+- The default install layout is `%USERPROFILE%\.codex\codex-browser-relay`.
 - Internal browser pages such as `edge://`, `chrome://`, `devtools://`, and extension pages cannot be controlled.
 - If the attached tab navigates in the same tab, the extension should reconnect automatically in current versions.
 - When selectors are uncertain, use `queryDetailed` first.

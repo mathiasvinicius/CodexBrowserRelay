@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $taskName = 'CodexBrowserRelayService'
 $runKeyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValueName = 'CodexBrowserRelayService'
-$serviceDir = 'C:\ProgramData\AMTECH\codex-browser-relay-service'
+$serviceDir = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $runner = Join-Path $serviceDir 'run-relay-service.vbs'
 
 if (-not (Test-Path $runner)) {

@@ -1,14 +1,11 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 import WebSocket, { WebSocketServer } from 'ws'
 
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 18793
 const DEFAULT_STATE_FILE = path.resolve(process.cwd(), 'runtime', 'relay-state.json')
-const RELAY_AUTH_HEADER = 'x-codex-relay-token'
-
 function logLine(message, extra = '') {
   const suffix = extra ? ` ${extra}` : ''
   console.log(`[relay ${new Date().toISOString()}] ${message}${suffix}`)
@@ -30,14 +27,6 @@ function headerValue(value) {
 
 function getHeader(req, name) {
   return headerValue(req.headers[name.toLowerCase()])
-}
-
-function tokenEquals(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false
-  const bufA = Buffer.from(a)
-  const bufB = Buffer.from(b)
-  if (bufA.length !== bufB.length) return false
-  return timingSafeEqual(bufA, bufB)
 }
 
 function isLoopbackHost(host) {
@@ -93,12 +82,7 @@ function createTargetList(connectedTargets, cdpWsUrl) {
   }))
 }
 
-export function getRelayAuthHeaderName() {
-  return RELAY_AUTH_HEADER
-}
-
-export function buildRelayMetadata({ host = DEFAULT_HOST, port = DEFAULT_PORT, token, stateFile = DEFAULT_STATE_FILE } = {}) {
-  const resolvedToken = token?.trim() || randomBytes(32).toString('base64url')
+export function buildRelayMetadata({ host = DEFAULT_HOST, port = DEFAULT_PORT, stateFile = DEFAULT_STATE_FILE } = {}) {
   const baseUrl = `http://${host}:${port}`
   return {
     host,
@@ -106,8 +90,6 @@ export function buildRelayMetadata({ host = DEFAULT_HOST, port = DEFAULT_PORT, t
     baseUrl,
     cdpWsUrl: `ws://${host}:${port}/cdp`,
     extensionWsUrl: `ws://${host}:${port}/extension`,
-    authHeader: RELAY_AUTH_HEADER,
-    authToken: resolvedToken,
     stateFile,
   }
 }
@@ -259,15 +241,6 @@ export async function startRelayServer(options = {}) {
     const url = new URL(req.url ?? '/', metadata.baseUrl)
     const pathname = url.pathname
 
-    if (pathname.startsWith('/json')) {
-      const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || !tokenEquals(token, metadata.authToken)) {
-        res.writeHead(401)
-        res.end('Unauthorized')
-        return
-      }
-    }
-
     if (req.method === 'HEAD' && pathname === '/') {
       res.writeHead(200)
       res.end()
@@ -281,38 +254,18 @@ export async function startRelayServer(options = {}) {
     }
 
     if (pathname === '/extension/status') {
-      const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || !tokenEquals(token, metadata.authToken)) {
-        res.writeHead(401)
-        res.end('Unauthorized')
-        return
-      }
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ connected: Boolean(extensionWs), targets: connectedTargets.size, pages: connectedPages.size }))
       return
     }
 
     if ((pathname === '/page/list' || pathname === '/page/list/') && req.method === 'GET') {
-      const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || !tokenEquals(token, metadata.authToken)) {
-        res.writeHead(401)
-        res.end('Unauthorized')
-        return
-      }
-
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(Array.from(connectedPages.values())))
       return
     }
 
     if ((pathname === '/page/command' || pathname === '/page/command/') && req.method === 'POST') {
-      const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || !tokenEquals(token, metadata.authToken)) {
-        res.writeHead(401)
-        res.end('Unauthorized')
-        return
-      }
-
       const MAX_BODY = 1024 * 1024 // 1 MB
       let raw = ''
       let rawBytes = 0
@@ -516,11 +469,6 @@ export async function startRelayServer(options = {}) {
     }
 
     if (pathname === '/cdp') {
-      const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || !tokenEquals(token, metadata.authToken)) {
-        rejectUpgrade(socket, 401, 'Unauthorized')
-        return
-      }
       if (!extensionWs) {
         rejectUpgrade(socket, 503, 'Extension not connected')
         return
@@ -536,34 +484,12 @@ export async function startRelayServer(options = {}) {
   })
 
   extensionServer.on('connection', (ws) => {
-    let authenticated = false
-    const authTimeout = setTimeout(() => {
-      if (!authenticated) {
-        logLine('extension auth timeout')
-        ws.close(4001, 'Authentication timeout')
-      }
-    }, 5000)
-    ws.once('close', () => clearTimeout(authTimeout))
-
-    ws.on('message', function authHandler(data) {
-      let msg
-      try { msg = JSON.parse(rawDataToString(data)) } catch { return }
-      if (msg?.method !== 'authenticate' || !tokenEquals(String(msg?.token ?? ''), metadata.authToken)) {
-        logLine('extension auth failed')
-        ws.close(4003, 'Authentication failed')
-        return
-      }
-      clearTimeout(authTimeout)
-      authenticated = true
-      ws.removeListener('message', authHandler)
-      ws.send(JSON.stringify({ method: 'authenticated' }))
-      onExtensionAuthenticated(ws)
-    })
+    onExtensionAuthenticated(ws)
   })
 
   function onExtensionAuthenticated(ws) {
     extensionWs = ws
-    logLine('extension authenticated')
+    logLine('extension connected')
 
     const pingTimer = setInterval(() => {
       if (ws.readyState !== WebSocket.OPEN) return

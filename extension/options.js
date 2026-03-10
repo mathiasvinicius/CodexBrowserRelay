@@ -46,11 +46,10 @@ async function checkRelayReachable(port) {
 }
 
 async function loadDiagnostics(port) {
-  const stored = await chrome.storage.local.get(['lastErrorMessage', 'lastErrorAt', 'lastErrorContext', 'relayToken'])
+  const stored = await chrome.storage.local.get(['lastErrorMessage', 'lastErrorAt', 'lastErrorContext'])
   const message = stored.lastErrorMessage
   const at = stored.lastErrorAt
   const url = stored.lastErrorContext?.url
-  const relayToken = String(stored.relayToken || '').trim()
 
   if (message) {
     const parts = [message]
@@ -62,13 +61,7 @@ async function loadDiagnostics(port) {
   }
 
   try {
-    if (!relayToken) {
-      throw new Error('Relay token not configured')
-    }
-    const res = await fetch(`http://127.0.0.1:${port}/extension/status`, {
-      method: 'GET',
-      headers: { 'x-codex-relay-token': relayToken },
-    })
+    const res = await fetch(`http://127.0.0.1:${port}/extension/status`, { method: 'GET' })
     const data = await res.json()
     const relayInfo = document.getElementById('relay-connection')
     if (relayInfo) {
@@ -78,15 +71,14 @@ async function loadDiagnostics(port) {
     }
   } catch {
     const relayInfo = document.getElementById('relay-connection')
-    if (relayInfo) relayInfo.textContent = relayToken ? 'Relay diagnostics unavailable.' : 'Configure the relay token to enable diagnostics.'
+    if (relayInfo) relayInfo.textContent = 'Relay diagnostics unavailable.'
   }
 }
 
 async function load() {
-  const stored = await chrome.storage.local.get(['relayPort', 'relayToken'])
+  const stored = await chrome.storage.local.get(['relayPort'])
   const port = clampPort(stored.relayPort)
   document.getElementById('port').value = String(port)
-  document.getElementById('token').value = String(stored.relayToken || '')
   updateRelayUrl(port)
   document.getElementById('brand').textContent = BRAND
   await checkRelayReachable(port)
@@ -96,8 +88,7 @@ async function load() {
 async function save() {
   const input = document.getElementById('port')
   const port = clampPort(input.value)
-  const token = (document.getElementById('token').value || '').trim()
-  await chrome.storage.local.set({ relayPort: port, relayToken: token })
+  await chrome.storage.local.set({ relayPort: port })
   input.value = String(port)
   updateRelayUrl(port)
   await checkRelayReachable(port)

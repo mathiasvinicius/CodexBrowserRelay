@@ -10,14 +10,13 @@ function parseArgs(argv) {
   const options = {}
 
   while (args.length > 0) {
-    const token = args.shift()
-    if (!token) break
+    const arg = args.shift()
+    if (!arg) break
 
-    if (token === '--host') options.host = args.shift()
-    else if (token === '--port') options.port = Number(args.shift())
-    else if (token === '--token') options.token = args.shift()
-    else if (token === '--state-file') options.stateFile = args.shift()
-    else if (token === '--help' || token === '-h') options.help = true
+    if (arg === '--host') options.host = args.shift()
+    else if (arg === '--port') options.port = Number(args.shift())
+    else if (arg === '--state-file') options.stateFile = args.shift()
+    else if (arg === '--help' || arg === '-h') options.help = true
   }
 
   return { command, options }
@@ -27,13 +26,12 @@ function printHelp() {
   process.stdout.write(`Codex Browser Relay Service
 
 Usage:
-  codex-browser-relay start [--host 127.0.0.1] [--port 18793] [--token TOKEN] [--state-file PATH]
+  codex-browser-relay start [--host 127.0.0.1] [--port 18793] [--state-file PATH]
   codex-browser-relay status [--state-file PATH]
 
 Environment:
   CODEX_BROWSER_RELAY_HOST
   CODEX_BROWSER_RELAY_PORT
-  CODEX_BROWSER_RELAY_TOKEN
   CODEX_BROWSER_RELAY_STATE_FILE
 `)
 }
@@ -52,7 +50,6 @@ async function run() {
 
   const host = options.host || process.env.CODEX_BROWSER_RELAY_HOST || DEFAULT_HOST
   const port = options.port || Number(process.env.CODEX_BROWSER_RELAY_PORT || DEFAULT_PORT)
-  const token = options.token || process.env.CODEX_BROWSER_RELAY_TOKEN
   const stateFile = path.resolve(options.stateFile || process.env.CODEX_BROWSER_RELAY_STATE_FILE || DEFAULT_STATE_FILE)
 
   if (command === 'status') {
@@ -65,13 +62,11 @@ async function run() {
     throw new Error(`Unknown command: ${command}`)
   }
 
-  const relay = await startRelayServer({ host, port, token, stateFile })
+  const relay = await startRelayServer({ host, port, stateFile })
 
   process.stdout.write(`Codex Browser Relay listening on ${relay.baseUrl}\n`)
   process.stdout.write(`Extension WebSocket: ${relay.extensionWsUrl}\n`)
   process.stdout.write(`CDP WebSocket: ${relay.cdpWsUrl}\n`)
-  process.stdout.write(`Auth header: ${relay.authHeader}\n`)
-  process.stdout.write(`Auth token: ${relay.authToken}\n`)
   process.stdout.write(`State file: ${relay.stateFile}\n`)
   process.stdout.write(`Model target hint: anthropic/claude-opus-4-6\n`)
 

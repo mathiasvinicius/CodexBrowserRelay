@@ -30,7 +30,6 @@ async function startTestRelay() {
   const relay = await startRelayServer({
     host: '127.0.0.1',
     port,
-    token: 'test-token-1234567890',
     stateFile,
   })
   return { relay, port, stateDir }
@@ -48,34 +47,28 @@ test('rejects wildcard host bind', async () => {
     startRelayServer({
       host: '0.0.0.0',
       port,
-      token: 'test-token',
       stateFile,
     }),
     /relay requires loopback host/i,
   )
 })
 
-test('page list requires auth token', async () => {
+test('page list is available without auth token', async () => {
   const { relay, port, stateDir } = await startTestRelay()
   try {
     const res = await fetch(`http://127.0.0.1:${port}/page/list`)
-    assert.equal(res.status, 401)
+    assert.equal(res.status, 200)
   } finally {
     await stopTestRelay(relay, stateDir)
   }
 })
 
-test('extension status requires auth token', async () => {
+test('extension status is available without auth token', async () => {
   const { relay, port, stateDir } = await startTestRelay()
   try {
-    const withoutToken = await fetch(`http://127.0.0.1:${port}/extension/status`)
-    assert.equal(withoutToken.status, 401)
-
-    const withToken = await fetch(`http://127.0.0.1:${port}/extension/status`, {
-      headers: { 'x-codex-relay-token': 'test-token-1234567890' },
-    })
-    assert.equal(withToken.status, 200)
-    const payload = await withToken.json()
+    const res = await fetch(`http://127.0.0.1:${port}/extension/status`)
+    assert.equal(res.status, 200)
+    const payload = await res.json()
     assert.equal(payload.connected, false)
   } finally {
     await stopTestRelay(relay, stateDir)
@@ -89,7 +82,6 @@ test('page command rejects oversized body', async () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-codex-relay-token': 'test-token-1234567890',
       },
       body: JSON.stringify({ payload: 'x'.repeat(1024 * 1024 + 32) }),
     })
@@ -99,36 +91,20 @@ test('page command rejects oversized body', async () => {
   }
 })
 
-test('extension websocket requires authentication handshake', async () => {
+test('extension websocket accepts direct connection without handshake', async () => {
   const { relay, port, stateDir } = await startTestRelay()
   try {
-    const unauthenticatedClose = await new Promise((resolve, reject) => {
-      const ws = new WebSocket(`ws://127.0.0.1:${port}/extension`, {
-        headers: { Origin: 'chrome-extension://unit-test' },
-      })
-      ws.once('error', reject)
-      ws.once('close', (code) => resolve(code))
-    })
-    assert.equal(unauthenticatedClose, 4001)
-
-    const authenticated = await new Promise((resolve, reject) => {
+    const connected = await new Promise((resolve, reject) => {
       const ws = new WebSocket(`ws://127.0.0.1:${port}/extension`, {
         headers: { Origin: 'chrome-extension://unit-test' },
       })
       ws.once('error', reject)
       ws.on('open', () => {
-        ws.send(JSON.stringify({ method: 'authenticate', token: 'test-token-1234567890' }))
-      })
-      ws.on('message', (data) => {
-        const payload = JSON.parse(String(data))
-        if (payload?.method === 'authenticated') {
-          ws.close(1000, 'done')
-          resolve(true)
-        }
+        ws.close(1000, 'done')
+        resolve(true)
       })
     })
-
-    assert.equal(authenticated, true)
+    assert.equal(connected, true)
   } finally {
     await stopTestRelay(relay, stateDir)
   }
