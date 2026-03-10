@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Codex Browser Relay",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Attach Codex to open web pages through a local relay for interaction and automation.",
   "icons": {
     "16": "icons/icon16.png",
