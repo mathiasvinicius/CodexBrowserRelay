@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Codex Browser Relay",
+  "version": "0.2.9",
+  "description": "Attach Codex to open web pages through a local relay for interaction and automation.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["debugger", "tabs", "activeTab", "storage", "scripting"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*", "<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Codex Browser Relay (click to attach/detach)",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

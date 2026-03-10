@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex Browser Relay</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --accent: #4e66ff;
+        --accent-strong: #2f35ff;
+        --accent-soft: #8ba1ff;
+        --panel: color-mix(in oklab, canvas 92%, canvasText 8%);
+        --border: color-mix(in oklab, canvasText 18%, transparent);
+        --muted: color-mix(in oklab, canvasText 70%, transparent);
+        --shadow: 0 10px 30px color-mix(in oklab, canvasText 18%, transparent);
+        font-family: "Aptos", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+        line-height: 1.45;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(1000px 500px at 10% 0%, color-mix(in oklab, var(--accent-soft) 34%, transparent), transparent 70%),
+          radial-gradient(900px 450px at 90% 0%, color-mix(in oklab, var(--accent-strong) 20%, transparent), transparent 75%),
+          linear-gradient(
+            135deg,
+            color-mix(in oklab, var(--accent-soft) 18%, canvas) 0%,
+            color-mix(in oklab, var(--accent) 12%, canvas) 42%,
+            color-mix(in oklab, var(--accent-strong) 14%, canvas) 100%
+          ),
+          canvas;
+        color: canvasText;
+      }
+      .wrap {
+        max-width: 860px;
+        margin: 36px auto;
+        padding: 0 24px 48px 24px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        box-shadow:
+          0 18px 36px color-mix(in oklab, var(--accent-strong) 20%, transparent),
+          inset 0 1px 0 rgba(255, 255, 255, 0.65);
+        flex: 0 0 auto;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+      .subtitle {
+        margin: 6px 0 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+      .card h2 {
+        margin: 0 0 10px 0;
+        font-size: 15px;
+        letter-spacing: 0.01em;
+      }
+      .card p {
+        margin: 8px 0 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input {
+        width: 160px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: color-mix(in oklab, canvas 92%, canvasText 8%);
+        color: canvasText;
+        outline: none;
+      }
+      input:focus {
+        border-color: color-mix(in oklab, var(--accent) 70%, transparent);
+        box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 20%, transparent);
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+        background: linear-gradient(
+          180deg,
+          color-mix(in oklab, var(--accent-soft) 82%, white 18%),
+          var(--accent-strong)
+        );
+        color: white;
+        font-weight: 650;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      .hint {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      code {
+        font-family: ui-monospace, Consolas, "Cascadia Code", monospace;
+        font-size: 12px;
+      }
+      .status {
+        margin-top: 10px;
+        font-size: 12px;
+        min-height: 16px;
+        color: color-mix(in oklab, var(--accent) 70%, canvasText 30%);
+      }
+      .status[data-kind='ok'] {
+        color: color-mix(in oklab, #16a34a 75%, canvasText 25%);
+      }
+      .status[data-kind='error'] {
+        color: color-mix(in oklab, #ef4444 75%, canvasText 25%);
+      }
+      .protocol {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <img class="logo" src="icons/icon128.png" alt="Codex Browser Relay icon" />
+        <div>
+          <h1 id="brand">Codex Browser Relay</h1>
+          <p class="subtitle">Click the toolbar button on a tab to attach or detach the CDP bridge.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div class="card">
+          <h2>What this extension does</h2>
+          <p>
+            This extension connects normal web pages to a local relay so external tools can inspect text, click elements, type into inputs, and coordinate page automation.
+          </p>
+          <p>
+            For regular sites it uses a page bridge approach first, which is more robust in Edge. Internal browser pages still cannot be controlled by extension policy.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>Relay port</h2>
+          <label for="port">Port</label>
+          <div class="row">
+            <input id="port" inputmode="numeric" pattern="[0-9]*" />
+            <button id="save" type="button">Save</button>
+          </div>
+          <div class="hint">
+            Default: <code>18793</code>. Extension connects to: <code id="relay-url">http://127.0.0.1:&lt;port&gt;/</code>.
+          </div>
+          <div class="status" id="status"></div>
+        </div>
+
+        <div class="card">
+          <h2>Protocol expected from the backend</h2>
+          <div class="protocol">
+            <p>HTTP health check on <code>HEAD /</code>.</p>
+            <p>WebSocket endpoint on <code>/extension</code>.</p>
+            <p>JSON messages using <code>ping</code>, <code>pong</code>, <code>pageCommand</code>, <code>pageAttached</code> and <code>pageDetached</code>.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Diagnostics</h2>
+          <p id="relay-connection">Checking relay diagnostics...</p>
+          <p id="diagnostic">No recent extension errors recorded.</p>
+        </div>
+      </div>
+
+      <script type="module" src="options.js"></script>
+    </div>
+  </body>
+</html>

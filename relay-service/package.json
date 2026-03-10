@@ -1,0 +1,15 @@
+{
+  "name": "codex-browser-relay-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone local relay for the Codex Browser Relay extension.",
+  "scripts": {
+    "start": "node src/cli.js start",
+    "status": "node src/cli.js status",
+    "start:18793": "node src/cli.js start --port 18793"
+  },
+  "dependencies": {
+    "ws": "^8.18.1"
+  }
+}

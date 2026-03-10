@@ -1,0 +1,7 @@
+node_modules/
+runtime/
+*.log
+*.pid
+relay-config.cmd
+Thumbs.db
+.DS_Store
