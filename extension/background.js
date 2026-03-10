@@ -178,6 +178,11 @@ async function getRelayPort() {
   return n
 }
 
+async function getRelayToken() {
+  const stored = await chrome.storage.local.get(['relayToken'])
+  return String(stored.relayToken || '')
+}
+
 function setBadge(tabId, kind) {
   const cfg = BADGE[kind]
   void chrome.action.setBadgeText({ tabId, text: cfg.text })
@@ -191,8 +196,13 @@ async function ensureRelayConnection() {
 
   relayConnectPromise = (async () => {
     const port = await getRelayPort()
+    const token = await getRelayToken()
     const httpBase = `http://127.0.0.1:${port}`
     const wsUrl = `ws://127.0.0.1:${port}/extension`
+
+    if (!token) {
+      throw new Error('Relay token not configured. Set it in the extension options page.')
+    }
 
     try {
       await fetch(`${httpBase}/`, { method: 'HEAD', signal: AbortSignal.timeout(2000) })
@@ -216,6 +226,26 @@ async function ensureRelayConnection() {
       ws.onclose = (ev) => {
         clearTimeout(t)
         reject(new Error(`WebSocket closed (${ev.code} ${ev.reason || 'no reason'})`))
+      }
+    })
+
+    // Authenticate with the relay server
+    ws.send(JSON.stringify({ method: 'authenticate', token }))
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('Extension auth timeout')), 5000)
+      const handler = (event) => {
+        let msg
+        try { msg = JSON.parse(String(event.data || '')) } catch { return }
+        if (msg?.method === 'authenticated') {
+          clearTimeout(t)
+          ws.removeEventListener('message', handler)
+          resolve()
+        }
+      }
+      ws.addEventListener('message', handler)
+      ws.onclose = (ev) => {
+        clearTimeout(t)
+        reject(new Error(`Auth rejected (${ev.code} ${ev.reason || 'no reason'})`))
       }
     })
 

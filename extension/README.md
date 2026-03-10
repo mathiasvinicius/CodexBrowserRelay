@@ -31,7 +31,8 @@ This repository includes a standalone relay service in `../relay-service`, so th
 3. Click `Load unpacked`.
 4. Select this folder.
 5. Start `relay-service`.
-6. Click the extension on the tab you want to attach.
+6. Open the extension options page and paste the relay auth token from `relay-service/runtime/relay-state.json`.
+7. Click the extension on the tab you want to attach.
 
 ## Protocol sketch
 

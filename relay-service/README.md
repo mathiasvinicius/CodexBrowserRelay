@@ -46,6 +46,8 @@ It saves your settings in:
 
 `D:\Users\vinicius.mathias\Git\CodexBrowserRelay\relay-service\relay-config.cmd`
 
+The extension must use the same auth token shown in `runtime\relay-state.json`. Paste that token into the extension options page before attaching tabs.
+
 The manager's option `1` is now the full install flow: it runs `npm install` and then registers local autostart for the relay.
 
 For a persistent local service outside the terminal, the project also includes:
@@ -77,6 +79,12 @@ Environment variables are also supported:
 - `CODEX_BROWSER_RELAY_PORT`
 - `CODEX_BROWSER_RELAY_TOKEN`
 - `CODEX_BROWSER_RELAY_STATE_FILE`
+
+## Test
+
+```bash
+npm test
+```
 
 ## What to connect where
 

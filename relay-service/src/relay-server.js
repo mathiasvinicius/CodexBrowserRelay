@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 import WebSocket, { WebSocketServer } from 'ws'
 
@@ -32,9 +32,17 @@ function getHeader(req, name) {
   return headerValue(req.headers[name.toLowerCase()])
 }
 
+function tokenEquals(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
+
 function isLoopbackHost(host) {
   const h = String(host || '').trim().toLowerCase()
-  return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '[::1]' || h === '::1' || h === '[::]' || h === '::'
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1'
 }
 
 function isLoopbackAddress(ip) {
@@ -70,7 +78,7 @@ async function ensureParentDir(filePath) {
 
 async function writeStateFile(stateFile, payload) {
   await ensureParentDir(stateFile)
-  await fs.writeFile(stateFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+  await fs.writeFile(stateFile, `${JSON.stringify(payload, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 })
 }
 
 function createTargetList(connectedTargets, cdpWsUrl) {
@@ -242,12 +250,18 @@ export async function startRelayServer(options = {}) {
   }
 
   const server = createServer(async (req, res) => {
+    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+      res.writeHead(403)
+      res.end('Forbidden')
+      return
+    }
+
     const url = new URL(req.url ?? '/', metadata.baseUrl)
     const pathname = url.pathname
 
     if (pathname.startsWith('/json')) {
       const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || token !== metadata.authToken) {
+      if (!token || !tokenEquals(token, metadata.authToken)) {
         res.writeHead(401)
         res.end('Unauthorized')
         return
@@ -267,6 +281,12 @@ export async function startRelayServer(options = {}) {
     }
 
     if (pathname === '/extension/status') {
+      const token = getHeader(req, RELAY_AUTH_HEADER)
+      if (!token || !tokenEquals(token, metadata.authToken)) {
+        res.writeHead(401)
+        res.end('Unauthorized')
+        return
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ connected: Boolean(extensionWs), targets: connectedTargets.size, pages: connectedPages.size }))
       return
@@ -274,7 +294,7 @@ export async function startRelayServer(options = {}) {
 
     if ((pathname === '/page/list' || pathname === '/page/list/') && req.method === 'GET') {
       const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || token !== metadata.authToken) {
+      if (!token || !tokenEquals(token, metadata.authToken)) {
         res.writeHead(401)
         res.end('Unauthorized')
         return
@@ -287,17 +307,38 @@ export async function startRelayServer(options = {}) {
 
     if ((pathname === '/page/command' || pathname === '/page/command/') && req.method === 'POST') {
       const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || token !== metadata.authToken) {
+      if (!token || !tokenEquals(token, metadata.authToken)) {
         res.writeHead(401)
         res.end('Unauthorized')
         return
       }
 
+      const MAX_BODY = 1024 * 1024 // 1 MB
       let raw = ''
+      let rawBytes = 0
+      let aborted = false
+      req.on('error', () => {
+        aborted = true
+        if (!res.headersSent) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'request stream error' }))
+        }
+      })
       req.on('data', (chunk) => {
+        rawBytes += chunk.length
+        if (rawBytes > MAX_BODY) {
+          aborted = true
+          if (!res.headersSent) {
+            res.writeHead(413, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'payload too large' }))
+          }
+          req.destroy()
+          return
+        }
         raw += chunk.toString('utf8')
       })
       req.on('end', async () => {
+        if (aborted) return
         try {
           const body = raw ? JSON.parse(raw) : {}
           const params = { ...body }
@@ -476,7 +517,7 @@ export async function startRelayServer(options = {}) {
 
     if (pathname === '/cdp') {
       const token = getHeader(req, RELAY_AUTH_HEADER)
-      if (!token || token !== metadata.authToken) {
+      if (!token || !tokenEquals(token, metadata.authToken)) {
         rejectUpgrade(socket, 401, 'Unauthorized')
         return
       }
@@ -495,8 +536,34 @@ export async function startRelayServer(options = {}) {
   })
 
   extensionServer.on('connection', (ws) => {
+    let authenticated = false
+    const authTimeout = setTimeout(() => {
+      if (!authenticated) {
+        logLine('extension auth timeout')
+        ws.close(4001, 'Authentication timeout')
+      }
+    }, 5000)
+    ws.once('close', () => clearTimeout(authTimeout))
+
+    ws.on('message', function authHandler(data) {
+      let msg
+      try { msg = JSON.parse(rawDataToString(data)) } catch { return }
+      if (msg?.method !== 'authenticate' || !tokenEquals(String(msg?.token ?? ''), metadata.authToken)) {
+        logLine('extension auth failed')
+        ws.close(4003, 'Authentication failed')
+        return
+      }
+      clearTimeout(authTimeout)
+      authenticated = true
+      ws.removeListener('message', authHandler)
+      ws.send(JSON.stringify({ method: 'authenticated' }))
+      onExtensionAuthenticated(ws)
+    })
+  })
+
+  function onExtensionAuthenticated(ws) {
     extensionWs = ws
-    logLine('extension connected')
+    logLine('extension authenticated')
 
     const pingTimer = setInterval(() => {
       if (ws.readyState !== WebSocket.OPEN) return
@@ -633,7 +700,7 @@ export async function startRelayServer(options = {}) {
       }
       cdpClients.clear()
     })
-  })
+  }
 
   cdpServer.on('connection', (ws) => {
     cdpClients.add(ws)

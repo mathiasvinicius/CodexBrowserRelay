@@ -217,6 +217,10 @@ async function handlePageCommand(command) {
     case 'navigate': {
       const url = String(command?.url || '').trim()
       if (!url) throw new Error('url is required')
+      const parsed = new URL(url, location.href)
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`unsupported navigation protocol: ${parsed.protocol}`)
+      }
       location.href = url
       return { ok: true, page: { ...getPageInfo(), navigatingTo: url } }
     }
@@ -271,6 +275,9 @@ async function handlePageCommand(command) {
     case 'waitForText': {
       const text = normalizedText(command?.text || '')
       const textGone = normalizedText(command?.textGone || '')
+      if (!text && !textGone) {
+        throw new Error('waitForText requires either text or textGone')
+      }
       const timeoutMs = Number(command?.timeoutMs) > 0 ? Number(command.timeoutMs) : 15000
       const intervalMs = Number(command?.intervalMs) > 0 ? Number(command.intervalMs) : 300
       const started = Date.now()
