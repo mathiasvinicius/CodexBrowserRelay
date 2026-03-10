@@ -1,5 +1,8 @@
 node_modules/
 runtime/
+__pycache__/
+*.pyc
+*.egg-info/
 *.log
 *.pid
 relay-config.cmd
