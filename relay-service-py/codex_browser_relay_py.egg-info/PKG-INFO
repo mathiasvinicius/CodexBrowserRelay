@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: codex-browser-relay-py
+Version: 0.1.0
+Summary: Python implementation of the Codex Browser Relay service.
+Requires-Python: >=3.11
+Requires-Dist: aiohttp<4.0,>=3.9

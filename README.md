@@ -8,6 +8,11 @@ This project is designed for a simple local install under `%USERPROFILE%\.codex`
 - a local relay service on `127.0.0.1:18793`
 - a Codex skill for live page actions
 
+The repository now includes two backend implementations:
+
+- `relay-service/` in Node.js
+- `relay-service-py/` in Python
+
 ## Overview
 
 The relay lets Codex work with tabs that are already open in your browser.
@@ -51,6 +56,12 @@ CodexBrowserRelay/
 |   |-- manage-relay.bat
 |   |-- run-relay-service.cmd
 |   `-- run-relay-service.vbs
+|-- relay-service-py/
+|   |-- pyproject.toml
+|   |-- README.md
+|   `-- relay/
+|       |-- __main__.py
+|       `-- server.py
 |-- skill/
 |   `-- codex-browser-relay/
 |       |-- SKILL.md
@@ -97,6 +108,8 @@ This installer:
 - runs `npm install`
 - registers local autostart with a hidden `VBS` launcher
 - starts the relay service
+
+By default, the installer uses the Node.js relay. The Python implementation is available in `relay-service-py/` for migration or side-by-side validation.
 
 ### Option 2: PowerShell directly
 

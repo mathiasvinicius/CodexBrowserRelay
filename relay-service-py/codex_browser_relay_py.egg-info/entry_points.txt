@@ -1,0 +1,2 @@
+[console_scripts]
+codex-relay-py = relay.__main__:main

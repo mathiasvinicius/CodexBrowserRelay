@@ -1,0 +1,15 @@
+[project]
+name = "codex-browser-relay-py"
+version = "0.1.0"
+description = "Python implementation of the Codex Browser Relay service."
+requires-python = ">=3.11"
+dependencies = [
+  "aiohttp>=3.9,<4.0",
+]
+
+[project.scripts]
+codex-relay-py = "relay.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

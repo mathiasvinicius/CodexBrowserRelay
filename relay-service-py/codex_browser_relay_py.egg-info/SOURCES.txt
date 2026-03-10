@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+codex_browser_relay_py.egg-info/PKG-INFO
+codex_browser_relay_py.egg-info/SOURCES.txt
+codex_browser_relay_py.egg-info/dependency_links.txt
+codex_browser_relay_py.egg-info/entry_points.txt
+codex_browser_relay_py.egg-info/requires.txt
+codex_browser_relay_py.egg-info/top_level.txt
+relay/__init__.py
+relay/__main__.py
+relay/server.py
