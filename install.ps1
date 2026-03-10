@@ -5,6 +5,7 @@ $codexHome = Join-Path $env:USERPROFILE '.codex'
 $installRoot = Join-Path $codexHome 'codex-browser-relay'
 $extensionTarget = Join-Path $installRoot 'extension'
 $relayTarget = Join-Path $installRoot 'relay-service'
+$relayPyTarget = Join-Path $installRoot 'relay-service-py'
 $skillTarget = Join-Path (Join-Path $codexHome 'skills') 'codex-browser-relay'
 
 function Ensure-Directory {
@@ -71,6 +72,12 @@ Mirror-Directory `
   -ExcludeFiles @('relay-config.cmd', '*.log', '*.pid')
 
 Mirror-Directory `
+  -Source (Join-Path $repoRoot 'relay-service-py') `
+  -Destination $relayPyTarget `
+  -ExcludeDirs @('__pycache__', 'runtime', '.git', 'codex_browser_relay_py.egg-info') `
+  -ExcludeFiles @('*.pyc', '*.log')
+
+Mirror-Directory `
   -Source (Join-Path $repoRoot 'skill\codex-browser-relay') `
   -Destination $skillTarget `
   -ExcludeDirs @('.git')
@@ -92,10 +99,22 @@ try {
   Pop-Location
 }
 
+Write-Host 'Installing Python relay package...' -ForegroundColor Cyan
+Push-Location $relayPyTarget
+try {
+  & python -m pip install -e .
+  if ($LASTEXITCODE -ne 0) {
+    throw "python -m pip install -e . failed with exit code $LASTEXITCODE"
+  }
+} finally {
+  Pop-Location
+}
+
 Write-Host ''
 Write-Host 'Install completed.' -ForegroundColor Green
 Write-Host "Extension path: $extensionTarget"
 Write-Host "Relay path:     $relayTarget"
+Write-Host "Relay py path:  $relayPyTarget"
 Write-Host "Skill path:     $skillTarget"
 Write-Host ''
 Write-Host 'Next step:' -ForegroundColor Yellow

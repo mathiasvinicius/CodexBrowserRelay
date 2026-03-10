@@ -109,7 +109,7 @@ This installer:
 - registers local autostart with a hidden `VBS` launcher
 - starts the relay service
 
-By default, the installer uses the Node.js relay. The Python implementation is available in `relay-service-py/` for migration or side-by-side validation.
+By default, the installer prepares both backends and the installed launchers can be switched to the Python relay.
 
 ### Option 2: PowerShell directly
 
