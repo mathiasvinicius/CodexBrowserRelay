@@ -8,6 +8,76 @@ $relayTarget = Join-Path $installRoot 'relay-service'
 $relayPyTarget = Join-Path $installRoot 'relay-service-py'
 $skillTarget = Join-Path (Join-Path $codexHome 'skills') 'codex-browser-relay'
 
+function Get-CommandPath {
+  param([string]$Name)
+  $cmd = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($cmd) { return $cmd.Source }
+  return $null
+}
+
+function Get-PythonVersion {
+  $pythonPath = Get-CommandPath -Name 'python'
+  if (-not $pythonPath) { return $null }
+
+  try {
+    $version = & $pythonPath -c "import sys; print('.'.join(map(str, sys.version_info[:3])))"
+    return [Version]($version.Trim())
+  } catch {
+    return $null
+  }
+}
+
+function Ensure-Winget {
+  $wingetPath = Get-CommandPath -Name 'winget'
+  if (-not $wingetPath) {
+    throw 'winget was not found. Install Python 3.11+ and Node.js manually, then run install.cmd again.'
+  }
+  return $wingetPath
+}
+
+function Install-WithWinget {
+  param(
+    [Parameter(Mandatory = $true)][string]$Id,
+    [Parameter(Mandatory = $true)][string]$Label
+  )
+
+  $wingetPath = Ensure-Winget
+  Write-Host "Installing $Label via winget..." -ForegroundColor Yellow
+  & $wingetPath install --id $Id --exact --accept-package-agreements --accept-source-agreements
+  if ($LASTEXITCODE -ne 0) {
+    throw "winget failed while installing $Label (package: $Id)."
+  }
+}
+
+function Ensure-Prerequisites {
+  $pythonVersion = Get-PythonVersion
+  if (-not $pythonVersion -or $pythonVersion -lt [Version]'3.11.0') {
+    Install-WithWinget -Id 'Python.Python.3.11' -Label 'Python 3.11'
+    $pythonVersion = Get-PythonVersion
+    if (-not $pythonVersion -or $pythonVersion -lt [Version]'3.11.0') {
+      throw 'Python 3.11+ is required. Install was attempted, but python is still unavailable in PATH. Reopen the terminal and run install.cmd again.'
+    }
+  }
+
+  $nodePath = Get-CommandPath -Name 'node'
+  if (-not $nodePath) {
+    Install-WithWinget -Id 'OpenJS.NodeJS.LTS' -Label 'Node.js LTS'
+    $nodePath = Get-CommandPath -Name 'node'
+    if (-not $nodePath) {
+      throw 'Node.js is required. Install was attempted, but node is still unavailable in PATH. Reopen the terminal and run install.cmd again.'
+    }
+  }
+
+  $npmPath = Get-CommandPath -Name 'npm'
+  if (-not $npmPath) {
+    throw 'npm was not found even though Node.js appears to be installed. Reopen the terminal and run install.cmd again.'
+  }
+
+  Write-Host "Python: $pythonVersion" -ForegroundColor DarkGray
+  Write-Host "Node:   $nodePath" -ForegroundColor DarkGray
+  Write-Host "npm:    $npmPath" -ForegroundColor DarkGray
+}
+
 function Ensure-Directory {
   param([string]$Path)
   if (-not (Test-Path $Path)) {
@@ -55,6 +125,8 @@ function Mirror-Directory {
 
 Write-Host 'Installing Codex Browser Relay into %USERPROFILE%\.codex...' -ForegroundColor Cyan
 Write-Host "Install root: $installRoot"
+
+Ensure-Prerequisites
 
 Ensure-Directory -Path $codexHome
 Ensure-Directory -Path (Join-Path $codexHome 'skills')

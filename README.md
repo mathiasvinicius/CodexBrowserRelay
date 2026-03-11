@@ -102,6 +102,8 @@ install.cmd
 
 This installer:
 
+- checks for `Python 3.11+`, `Node.js`, and `npm`
+- tries to install missing prerequisites with `winget`
 - copies the extension to `%USERPROFILE%\.codex\codex-browser-relay\extension`
 - copies the relay to `%USERPROFILE%\.codex\codex-browser-relay\relay-service`
 - copies the skill to `%USERPROFILE%\.codex\skills\codex-browser-relay`
@@ -116,6 +118,17 @@ By default, the installer prepares both backends and the installed launchers can
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
+
+## Prerequisites
+
+The installer now handles these prerequisites automatically when possible:
+
+- `Python 3.11+`
+- `Node.js`
+- `npm`
+- `winget` for bootstrap installs
+
+If `winget` is not available, install `Python 3.11+` and `Node.js LTS` manually, reopen the terminal, and run `install.cmd` again.
 
 ## Browser setup
 
