@@ -1,7 +1,11 @@
+param(
+  [string]$InstallUserProfile = $env:USERPROFILE
+)
+
 $ErrorActionPreference = 'Stop'
 
 $pythonPath = (Get-Command python -ErrorAction Stop).Source
-$installRoot = Join-Path $env:USERPROFILE '.codex\codex-browser-relay'
+$installRoot = Join-Path $InstallUserProfile '.codex\codex-browser-relay'
 $pythonRelayDir = Join-Path $installRoot 'relay-service-py'
 
 if (-not (Test-Path $pythonRelayDir)) {

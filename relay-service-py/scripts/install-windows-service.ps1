@@ -1,8 +1,8 @@
-$ErrorActionPreference = 'Stop'
-
 param(
   [string]$InstallUserProfile = $env:USERPROFILE
 )
+
+$ErrorActionPreference = 'Stop'
 
 $pythonPath = (Get-Command python -ErrorAction Stop).Source
 $installRoot = Join-Path $InstallUserProfile '.codex\codex-browser-relay'
