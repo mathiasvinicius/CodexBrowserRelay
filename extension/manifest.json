@@ -9,7 +9,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["debugger", "tabs", "activeTab", "storage", "scripting"],
+  "permissions": ["debugger", "tabs", "activeTab", "storage", "scripting", "downloads"],
   "host_permissions": ["http://127.0.0.1/*", "http://localhost/*", "<all_urls>"],
   "background": {
     "service_worker": "background.js",
@@ -24,6 +24,7 @@
   ],
   "action": {
     "default_title": "Codex Browser Relay (click to attach/detach)",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

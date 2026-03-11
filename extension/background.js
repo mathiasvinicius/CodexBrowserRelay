@@ -473,6 +473,68 @@ async function captureAttachedTab(tabId, format = 'png') {
   }
 }
 
+async function getCurrentWindowTabForPopup() {
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true })
+  return active || null
+}
+
+async function getPopupState() {
+  const activeTab = await getCurrentWindowTabForPopup()
+  const { tab: candidate } = await resolveCandidateTab(activeTab)
+  const tab = candidate || activeTab
+  const tabId = tab?.id || null
+  const pageTab = tabId ? pageTabs.get(tabId) : null
+
+  return {
+    activeTabId: tabId,
+    activeUrl: tab?.url || '',
+    activeTitle: tab?.title || '',
+    supported: Boolean(tabId && !isUnsupportedTabUrl(tab?.url)),
+    attached: Boolean(pageTab?.state === 'connected'),
+    sessionId: pageTab?.sessionId || '',
+    pageId: pageTab?.pageId || '',
+  }
+}
+
+async function handlePopupCommand(message) {
+  const command = String(message?.command || '').trim()
+  if (!command) throw new Error('Missing popup command')
+
+  if (command === 'getState') {
+    return await getPopupState()
+  }
+
+  const activeTab = await getCurrentWindowTabForPopup()
+  if (!activeTab?.id) throw new Error('No active tab found')
+
+  if (command === 'toggleAttach') {
+    await connectOrToggleForTab(activeTab)
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    return await getPopupState()
+  }
+
+  if (command === 'captureVisible') {
+    const state = await getPopupState()
+    if (!state.activeTabId || !state.attached) {
+      throw new Error('Attach the current tab before capturing')
+    }
+    const capture = await captureAttachedTab(state.activeTabId, 'png')
+    const filename = `codex-browser-relay-${Date.now()}.png`
+    await chrome.downloads.download({
+      url: capture.imageDataUrl,
+      filename,
+      saveAs: true,
+    })
+    return {
+      ...capture,
+      filename,
+      ...state,
+    }
+  }
+
+  throw new Error(`Unsupported popup command: ${command}`)
+}
+
 async function ensurePageBridge(tabId) {
   try {
     const ping = await sendPageCommand(tabId, { action: 'ping' })
@@ -872,6 +934,22 @@ function onDebuggerDetach(source, reason) {
 }
 
 chrome.action.onClicked.addListener((tab) => void connectOrToggleForTab(tab))
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || typeof message !== 'object') return undefined
+  if (message.type !== 'POPUP_COMMAND') return undefined
+
+  Promise.resolve(handlePopupCommand(message))
+    .then((result) => sendResponse({ ok: true, result }))
+    .catch((error) =>
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    )
+
+  return true
+})
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId).catch(() => null)

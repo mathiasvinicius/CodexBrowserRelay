@@ -30,6 +30,7 @@ Main capabilities:
 - navigate the attached tab
 - support practical flows like ChatGPT image generation and download
 - capture the visible area of the attached tab for visual inspection
+- provide extension popup buttons for manual attach/detach and visible capture
 - support running the Python backend as a Windows service visible in `services.msc`
 
 ## Architecture
@@ -149,7 +150,10 @@ After the install finishes:
 4. Select:
    `%USERPROFILE%\.codex\codex-browser-relay\extension`
 5. Open any normal website
-6. Click the `Codex Browser Relay` icon until it shows `ON`
+6. Click the `Codex Browser Relay` icon to open the popup
+7. Use:
+   - `Attach Current Tab`
+   - `Capture Visible`
 
 ## Quick validation
 
