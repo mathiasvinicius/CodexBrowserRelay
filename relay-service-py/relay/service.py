@@ -10,7 +10,7 @@ import win32event
 import win32service
 import win32serviceutil
 
-from .server import DEFAULT_HOST, DEFAULT_PORT, run_relay_server
+from relay.server import DEFAULT_HOST, DEFAULT_PORT, run_relay_server
 
 
 def load_service_config() -> dict:
