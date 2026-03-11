@@ -9,6 +9,47 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Invoke-WithRetry {
+  param(
+    [Parameter(Mandatory = $true)]
+    [scriptblock]$Script,
+    [int]$Retries = 8,
+    [int]$DelaySeconds = 3
+  )
+
+  $lastError = $null
+  for ($attempt = 0; $attempt -lt $Retries; $attempt++) {
+    try {
+      return & $Script
+    } catch {
+      $lastError = $_
+      Start-Sleep -Seconds $DelaySeconds
+    }
+  }
+
+  throw $lastError
+}
+
+function Get-AttachedPage {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PreferredSessionId
+  )
+
+  $pages = Invoke-WithRetry { Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:18793/page/list' }
+  if (-not $pages) {
+    throw 'No attached pages found.'
+  }
+
+  $preferred = $pages | Where-Object { $_.sessionId -eq $PreferredSessionId } | Select-Object -First 1
+  if ($preferred) { return $preferred }
+
+  $udemy = $pages | Where-Object { $_.page.url -like 'https://ibm-learning.udemy.com/*' } | Select-Object -First 1
+  if ($udemy) { return $udemy }
+
+  return $pages | Select-Object -First 1
+}
+
 function Invoke-RelayPageCommand {
   param(
     [Parameter(Mandatory = $true)]
@@ -23,33 +64,84 @@ function Invoke-RelayPageCommand {
 }
 
 for ($i = 0; $i -lt $MaxLessons; $i++) {
-  $media = Invoke-RelayPageCommand @{
-    action = 'getMediaState'
-    selector = 'video'
-    sessionId = $SessionId
+  $currentPage = Get-AttachedPage -PreferredSessionId $SessionId
+  $activeSessionId = $currentPage.sessionId
+  $activePageId = $currentPage.pageId
+
+  $media = $null
+  try {
+    $media = Invoke-WithRetry {
+      Invoke-RelayPageCommand @{
+        action = 'getMediaState'
+        selector = 'video'
+        sessionId = $activeSessionId
+        pageId = $activePageId
+      }
+    }
+  } catch {
+    $media = $null
   }
 
-  if ($media.media.duration -ne $null) {
-    Invoke-RelayPageCommand @{
-      action = 'seekMediaToEnd'
-      selector = 'video'
-      sessionId = $SessionId
-      secondsFromEnd = $SecondsFromEnd
-      fireEnded = $true
+  if ($media -and $media.media.duration -ne $null) {
+    Invoke-WithRetry {
+      Invoke-RelayPageCommand @{
+        action = 'seekMediaToEnd'
+        selector = 'video'
+        sessionId = $activeSessionId
+        pageId = $activePageId
+        secondsFromEnd = $SecondsFromEnd
+        fireEnded = $true
+      }
     } | Out-Null
     Start-Sleep -Seconds $PauseAfterSeekSeconds
   }
 
-  $next = Invoke-RelayPageCommand @{
-    action = 'goToNextUdemyLecture'
-    sessionId = $SessionId
+  $advanced = $false
+  $next = $null
+
+  try {
+    $next = Invoke-WithRetry {
+      Invoke-RelayPageCommand @{
+        action = 'clickText'
+        text = 'A seguir'
+        selector = 'button, a, [role="button"], div, span'
+        sessionId = $activeSessionId
+        pageId = $activePageId
+      }
+    }
+    $advanced = $true
+  } catch {
+    try {
+      $next = Invoke-WithRetry {
+        Invoke-RelayPageCommand @{
+          action = 'goToNextUdemyLecture'
+          sessionId = $activeSessionId
+          pageId = $activePageId
+        }
+      }
+      $advanced = $true
+    } catch {
+      $advanced = $false
+    }
   }
 
-  Start-Sleep -Seconds $PauseAfterNextSeconds
+  if ($advanced) {
+    Start-Sleep -Seconds $PauseAfterNextSeconds
+  } else {
+    Start-Sleep -Seconds $PauseAfterNextSeconds
+  }
+
+  $nextPage = Get-AttachedPage -PreferredSessionId $activeSessionId
 
   [PSCustomObject]@{
     step = $i + 1
+    sessionId = $activeSessionId
+    pageId = $activePageId
     nextHref = $next.nextHref
     nextText = $next.nextText
+    advanced = $advanced
+    resultingSessionId = $nextPage.sessionId
+    resultingPageId = $nextPage.pageId
+    resultingUrl = $nextPage.page.url
   } | ConvertTo-Json -Depth 6
 }
