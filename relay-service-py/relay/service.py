@@ -17,7 +17,7 @@ def load_service_config() -> dict:
     config_path = Path(__file__).resolve().parents[1] / "service-config.json"
     if not config_path.exists():
         return {}
-    return json.loads(config_path.read_text(encoding="utf-8"))
+    return json.loads(config_path.read_text(encoding="utf-8-sig"))
 
 
 class CodexBrowserRelayPyService(win32serviceutil.ServiceFramework):

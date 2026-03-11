@@ -28,7 +28,7 @@ $config = @{
   port = 18793
   stateFile = $stateFile
 }
-$config | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
+$config | ConvertTo-Json | Set-Content -Path $configPath -Encoding utf8NoBOM
 
 Push-Location $pythonRelayDir
 try {
