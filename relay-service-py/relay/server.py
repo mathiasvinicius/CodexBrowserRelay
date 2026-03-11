@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -13,12 +12,9 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 18793
 DEFAULT_STATE_FILE = Path.cwd() / "runtime" / "relay-state.json"
 
-LOG = logging.getLogger("codex-browser-relay-py")
-
-
 def log_line(message: str, extra: str = "") -> None:
     suffix = f" {extra}" if extra else ""
-    LOG.info("[relay %s] %s%s", __import__("datetime").datetime.utcnow().isoformat() + "Z", message, suffix)
+    print(f"[relay {__import__('datetime').datetime.utcnow().isoformat()}Z] {message}{suffix}", flush=True)
 
 
 def is_loopback_host(host: str) -> bool:
@@ -314,10 +310,22 @@ async def ws_extension_handler(request: web.Request) -> web.WebSocketResponse:
     if state.extension_ws is not None and not state.extension_ws.closed:
         raise web.HTTPConflict(text="Extension already connected")
 
-    ws = web.WebSocketResponse(heartbeat=5.0)
+    ws = web.WebSocketResponse()
     await ws.prepare(request)
     state.extension_ws = ws
     log_line("extension connected")
+
+    async def ping_loop() -> None:
+        try:
+            while not ws.closed:
+                await asyncio.sleep(5)
+                if ws.closed:
+                    break
+                await ws.send_json({"method": "ping"})
+        except Exception:  # noqa: BLE001
+            return
+
+    ping_task = asyncio.create_task(ping_loop())
 
     async for message in ws:
         if message.type is WSMsgType.TEXT:
@@ -342,6 +350,7 @@ async def ws_extension_handler(request: web.Request) -> web.WebSocketResponse:
             if parsed.get("method") == "pageAttached":
                 params = parsed.get("params") or {}
                 if params.get("sessionId") and params.get("pageId"):
+                    log_line("page attached", f"session={params['sessionId']} url={params.get('page', {}).get('url', '')}")
                     state.connected_pages[params["sessionId"]] = {
                         "sessionId": params["sessionId"],
                         "pageId": params["pageId"],
@@ -353,6 +362,7 @@ async def ws_extension_handler(request: web.Request) -> web.WebSocketResponse:
                 params = parsed.get("params") or {}
                 session_id = params.get("sessionId")
                 if session_id:
+                    log_line("page detached", f"session={session_id}")
                     state.connected_pages.pop(session_id, None)
                 continue
             if parsed.get("method") != "forwardCDPEvent":
@@ -401,9 +411,11 @@ async def ws_extension_handler(request: web.Request) -> web.WebSocketResponse:
                 return_exceptions=True,
             )
         elif message.type is WSMsgType.ERROR:
+            log_line("extension websocket error", str(ws.exception()))
             break
 
-    log_line("extension disconnected")
+    log_line("extension disconnected", f"close_code={ws.close_code}")
+    ping_task.cancel()
     state.extension_ws = None
     for future in state.pending_extension.values():
         if not future.done():
@@ -422,7 +434,7 @@ async def ws_cdp_handler(request: web.Request) -> web.WebSocketResponse:
     if state.extension_ws is None or state.extension_ws.closed:
         raise web.HTTPServiceUnavailable(text="Extension not connected")
 
-    ws = web.WebSocketResponse(heartbeat=5.0)
+    ws = web.WebSocketResponse()
     await ws.prepare(request)
     state.cdp_clients.add(ws)
     log_line("cdp client connected", f"count={len(state.cdp_clients)}")
