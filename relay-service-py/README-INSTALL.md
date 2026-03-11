@@ -19,3 +19,7 @@ If you want the Python backend to appear in `services.msc`, use:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\relay-service-py\scripts\install-windows-service.ps1
 ```
+
+The service name shown in `services.msc` is:
+
+`CodexBrowserRelayPy`

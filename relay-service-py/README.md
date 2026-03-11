@@ -23,6 +23,28 @@ cd relay-service-py
 python -m pip install -e .
 ```
 
+## Windows service
+
+Service module:
+
+- `relay.service`
+
+Service name in `services.msc`:
+
+- `CodexBrowserRelayPy`
+
+Install as a Windows service:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows-service.ps1 -InstallUserProfile $env:USERPROFILE
+```
+
+Remove the service:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\remove-windows-service.ps1 -InstallUserProfile $env:USERPROFILE
+```
+
 ## Run
 
 ```powershell
@@ -35,3 +57,13 @@ Optional arguments:
 python -m relay start --host 127.0.0.1 --port 18793
 python -m relay status
 ```
+
+## Validated behavior
+
+This backend has been validated with the current extension for:
+
+- extension attach
+- `getPageInfo`
+- `type`
+- `click`
+- ChatGPT image generation flow on `chatgpt.com`

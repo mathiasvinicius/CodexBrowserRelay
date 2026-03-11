@@ -13,6 +13,10 @@ The repository now includes two backend implementations:
 - `relay-service/` in Node.js
 - `relay-service-py/` in Python
 
+Current recommended backend on Windows:
+
+- `relay-service-py/` as a Windows service (`CodexBrowserRelayPy`)
+
 ## Overview
 
 The relay lets Codex work with tabs that are already open in your browser.
@@ -25,6 +29,7 @@ Main capabilities:
 - type into inputs and editors
 - navigate the attached tab
 - support practical flows like ChatGPT image generation and download
+- support running the Python backend as a Windows service visible in `services.msc`
 
 ## Architecture
 
@@ -113,7 +118,7 @@ This installer:
 - installs the Python backend as a Windows service when elevated
 - starts the relay service
 
-By default, the installer prepares both backends and the installed launchers can be switched to the Python relay.
+By default, the installer prepares both backends. On elevated installs, the Python backend can be installed as the Windows service `CodexBrowserRelayPy`.
 
 ### Option 2: PowerShell directly
 
@@ -158,6 +163,12 @@ With the service name:
 
 `CodexBrowserRelayPy`
 
+Expected healthy state:
+
+- `Status: Running`
+- `StartType: Automatic`
+- listening on `127.0.0.1:18793`
+
 If you want to inspect relay state:
 
 `%USERPROFILE%\.codex\codex-browser-relay\relay-service\runtime\relay-state.json`
@@ -184,3 +195,4 @@ Then reload the browser extension in `edge://extensions` or `chrome://extensions
 - the default install flow does not require a relay token
 - the relay is model-agnostic and does not embed Claude, Codex, or any other LLM
 - internal pages like `edge://`, `chrome://`, `devtools://`, and extension pages are not controllable
+- the Python backend has been validated with the current extension for page attach, typing, clicking, and ChatGPT image generation flows
