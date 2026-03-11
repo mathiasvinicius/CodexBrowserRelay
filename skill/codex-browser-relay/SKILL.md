@@ -34,6 +34,9 @@ Use the local relay instead of Playwright when the user wants to work with an al
 - `scrollIntoView`
 - `navigate`
 - `captureVisibleTab`
+- `getMediaState`
+- `seekMediaToEnd`
+- `goToNextUdemyLecture`
 
 ## Usage
 
@@ -101,6 +104,12 @@ Capture the current attached tab for visual inspection:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture_page.ps1 -SessionId codex-page-1 -OutputPath "$env:TEMP\codex-browser-relay.png"
 ```
 
+Advance the current Udemy lecture to the end and jump to the next one:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\advance_udemy.ps1 -SessionId codex-page-1 -MaxLessons 10
+```
+
 ## Notes
 
 - Prefer this skill for tabs that are already open and visible in the user's browser.
@@ -110,4 +119,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture_page.ps1 -Se
 - If the attached tab navigates in the same tab, the extension should reconnect automatically in current versions.
 - When selectors are uncertain, use `queryDetailed` first.
 - Use `capture_page.ps1` when visual inspection of the attached tab would help before interacting further.
+- Use `advance_udemy.ps1` for the specific Udemy workflow where a lecture is considered complete only after the video reaches the end.
 - The relay can trigger browser downloads from the page, but the browser-native save confirmation may still require a manual click depending on current Edge download settings.

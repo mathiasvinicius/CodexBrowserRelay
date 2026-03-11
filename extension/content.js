@@ -128,6 +128,52 @@ function getPageInfo() {
   }
 }
 
+function selectMedia(selector = 'video') {
+  const media = selectOne(selector)
+  if (!(media instanceof HTMLMediaElement)) {
+    throw new Error(`selector is not a media element: ${selector}`)
+  }
+  return media
+}
+
+function mediaState(media) {
+  return {
+    currentTime: Number(media.currentTime || 0),
+    duration: Number.isFinite(media.duration) ? media.duration : null,
+    paused: Boolean(media.paused),
+    ended: Boolean(media.ended),
+    readyState: Number(media.readyState || 0),
+    playbackRate: Number(media.playbackRate || 1),
+  }
+}
+
+function dispatchMediaEvent(media, type) {
+  media.dispatchEvent(new Event(type, { bubbles: true, cancelable: true }))
+}
+
+function findNextUdemyLectureLink() {
+  const currentHref = location.href
+  const links = Array.from(document.querySelectorAll('a[href*="/learn/lecture/"]'))
+    .filter((el) => el instanceof HTMLAnchorElement)
+    .map((el) => /** @type {HTMLAnchorElement} */ (el))
+    .filter((el) => el.href)
+
+  const unique = []
+  const seen = new Set()
+  for (const link of links) {
+    if (seen.has(link.href)) continue
+    seen.add(link.href)
+    unique.push(link)
+  }
+
+  const currentIndex = unique.findIndex((link) => link.href === currentHref)
+  if (currentIndex >= 0 && unique[currentIndex + 1]) {
+    return unique[currentIndex + 1]
+  }
+
+  return unique.find((link) => link.href !== currentHref) || null
+}
+
 async function handlePageCommand(command) {
   const action = String(command?.action || '').trim()
 
@@ -248,6 +294,54 @@ async function handlePageCommand(command) {
       target.dispatchEvent(down)
       target.dispatchEvent(up)
       return { ok: true, key, element: target ? elementDetail(target) : null, page: getPageInfo() }
+    }
+    case 'getMediaState': {
+      const selector = String(command?.selector || 'video').trim()
+      const media = selectMedia(selector)
+      return { ok: true, selector, media: mediaState(media), page: getPageInfo() }
+    }
+    case 'seekMediaToEnd': {
+      const selector = String(command?.selector || 'video').trim()
+      const secondsFromEnd = Number(command?.secondsFromEnd)
+      const buffer = Number.isFinite(secondsFromEnd) && secondsFromEnd >= 0 ? secondsFromEnd : 0.25
+      const media = selectMedia(selector)
+
+      if (!Number.isFinite(media.duration) || media.duration <= 0) {
+        throw new Error('media duration is not available yet')
+      }
+
+      const targetTime = Math.max(0, media.duration - buffer)
+      media.pause()
+      media.currentTime = targetTime
+      dispatchMediaEvent(media, 'seeking')
+      dispatchMediaEvent(media, 'timeupdate')
+      dispatchMediaEvent(media, 'seeked')
+
+      if (command?.fireEnded !== false) {
+        dispatchMediaEvent(media, 'ended')
+      }
+
+      return {
+        ok: true,
+        selector,
+        targetTime,
+        media: mediaState(media),
+        page: getPageInfo(),
+      }
+    }
+    case 'goToNextUdemyLecture': {
+      const nextLink = findNextUdemyLectureLink()
+      if (!nextLink) {
+        throw new Error('could not find the next Udemy lecture link')
+      }
+      nextLink.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' })
+      nextLink.click()
+      return {
+        ok: true,
+        nextHref: nextLink.href,
+        nextText: normalizedText(nextLink.innerText || nextLink.textContent || ''),
+        page: getPageInfo(),
+      }
     }
     case 'submitComposer': {
       const target = command?.selector ? selectOne(command.selector) : document.activeElement || document.body
