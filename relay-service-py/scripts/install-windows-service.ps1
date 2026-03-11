@@ -37,8 +37,13 @@ try {
     throw "python -m pip install -e . failed with exit code $LASTEXITCODE"
   }
 
-  & $pythonPath -m relay.service --startup auto update
-  if ($LASTEXITCODE -ne 0) {
+  $serviceExists = $null -ne (Get-Service -Name CodexBrowserRelayPy -ErrorAction SilentlyContinue)
+  if ($serviceExists) {
+    & $pythonPath -m relay.service --startup auto update
+    if ($LASTEXITCODE -ne 0) {
+      throw "Failed to update CodexBrowserRelayPy Windows service."
+    }
+  } else {
     & $pythonPath -m relay.service --startup auto install
     if ($LASTEXITCODE -ne 0) {
       throw "Failed to install CodexBrowserRelayPy Windows service."
