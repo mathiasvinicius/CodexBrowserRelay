@@ -5,44 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Codex Browser Relay</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
       :root {
-        color-scheme: light dark;
-        --accent: #4e66ff;
-        --accent-strong: #2f35ff;
-        --panel: color-mix(in oklab, canvas 92%, canvasText 8%);
-        --border: color-mix(in oklab, canvasText 18%, transparent);
-        --muted: color-mix(in oklab, canvasText 70%, transparent);
-        font-family: "Aptos", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+        color-scheme: dark;
+        --bg-base: #0f172a;
+        --bg-elevated: #1e293b;
+        --bg-surface: #334155;
+        --ink: #f1f5f9;
+        --ink-secondary: #94a3b8;
+        --muted: #64748b;
+        --accent: #14b8a6;
+        --accent-hover: #2dd4bf;
+        --accent-muted: rgba(20, 184, 166, 0.15);
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --destructive: #ef4444;
+        --border: rgba(255, 255, 255, 0.06);
+        --border-strong: rgba(255, 255, 255, 0.12);
       }
       body {
         margin: 0;
-        width: 320px;
-        background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 12%, canvas), canvas);
-        color: canvasText;
+        width: 340px;
+        background:
+          linear-gradient(180deg, rgba(20, 184, 166, 0.07), transparent 140px),
+          var(--bg-base);
+        color: var(--ink);
       }
       .wrap {
         padding: 14px;
       }
       h1 {
-        font-size: 16px;
-        margin: 0 0 6px 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 4px 0;
       }
       p {
         margin: 0;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
+        line-height: 1.45;
       }
       .card {
         margin-top: 12px;
-        background: var(--panel);
+        background: var(--bg-elevated);
         border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 12px;
+        border-radius: 12px;
+        padding: 14px;
       }
       .status {
-        font-size: 12px;
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 12px;
+        align-items: center;
+        font-size: 11px;
         line-height: 1.4;
         margin-bottom: 10px;
+      }
+      .gauge {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at center, var(--bg-elevated) 58%, transparent 59%),
+          conic-gradient(var(--accent) 0deg 220deg, rgba(255,255,255,0.08) 220deg 360deg);
+        border: 1px solid var(--border-strong);
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+      }
+      .gauge span {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 10px;
+        color: var(--accent-hover);
+      }
+      .status-copy {
+        min-width: 0;
+      }
+      .status-copy strong {
+        display: block;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 10px;
+        color: var(--ink-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
       }
       .buttons {
         display: grid;
@@ -51,21 +99,33 @@
       button,
       a.button {
         appearance: none;
-        border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
-        background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 82%, white 18%), var(--accent-strong));
-        color: white;
+        border: 1px solid rgba(20, 184, 166, 0.26);
+        background: var(--accent);
+        color: var(--bg-base);
         text-decoration: none;
         text-align: center;
-        border-radius: 12px;
+        border-radius: 8px;
         padding: 10px 12px;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
         font-weight: 650;
+        letter-spacing: 0.01em;
         cursor: pointer;
       }
       button.secondary,
       a.button.secondary {
-        background: color-mix(in oklab, canvas 90%, canvasText 10%);
-        color: canvasText;
+        background: transparent;
+        color: var(--ink-secondary);
         border-color: var(--border);
+      }
+      button:hover,
+      a.button:hover {
+        background: var(--accent-hover);
+      }
+      button.secondary:hover,
+      a.button.secondary:hover {
+        background: var(--bg-surface);
+        border-color: var(--border-strong);
+        color: var(--ink);
       }
       button:disabled {
         opacity: 0.5;
@@ -74,18 +134,29 @@
       .message {
         margin-top: 10px;
         min-height: 18px;
-        font-size: 12px;
-        color: var(--muted);
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 10px;
+        color: var(--ink-secondary);
       }
     </style>
   </head>
   <body>
     <div class="wrap">
       <h1>Codex Browser Relay</h1>
-      <p>Attach a tab and capture the visible area manually.</p>
+      <p>Precision panel for tab attach, visual capture, and relay control.</p>
 
       <div class="card">
-        <div class="status" id="status">Loading…</div>
+        <div class="status">
+          <div class="gauge"><span>LINK</span></div>
+          <div class="status-copy">
+            <strong>Attached Session</strong>
+            <div id="status">Loading…</div>
+          </div>
+        </div>
         <div class="buttons">
           <button id="toggle">Attach / Detach</button>
           <button id="capture">Capture Visible</button>
