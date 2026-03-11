@@ -33,6 +33,7 @@ Use the local relay instead of Playwright when the user wants to work with an al
 - `submitComposer`
 - `scrollIntoView`
 - `navigate`
+- `captureVisibleTab`
 
 ## Usage
 
@@ -94,6 +95,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/page_command.ps1 -Ac
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/page_command.ps1 -Action click -Selector 'button[aria-label="Baixar essa imagem"]'
 ```
 
+Capture the current attached tab for visual inspection:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture_page.ps1 -SessionId codex-page-1 -OutputPath "$env:TEMP\codex-browser-relay.png"
+```
+
 ## Notes
 
 - Prefer this skill for tabs that are already open and visible in the user's browser.
@@ -102,4 +109,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/page_command.ps1 -Ac
 - Internal browser pages such as `edge://`, `chrome://`, `devtools://`, and extension pages cannot be controlled.
 - If the attached tab navigates in the same tab, the extension should reconnect automatically in current versions.
 - When selectors are uncertain, use `queryDetailed` first.
+- Use `capture_page.ps1` when visual inspection of the attached tab would help before interacting further.
 - The relay can trigger browser downloads from the page, but the browser-native save confirmation may still require a manual click depending on current Edge download settings.

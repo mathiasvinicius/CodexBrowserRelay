@@ -29,6 +29,7 @@ Main capabilities:
 - type into inputs and editors
 - navigate the attached tab
 - support practical flows like ChatGPT image generation and download
+- capture the visible area of the attached tab for visual inspection
 - support running the Python backend as a Windows service visible in `services.msc`
 
 ## Architecture
@@ -71,6 +72,7 @@ CodexBrowserRelay/
 |   `-- codex-browser-relay/
 |       |-- SKILL.md
 |       `-- scripts/
+|           |-- capture_page.ps1
 |           |-- list_pages.ps1
 |           `-- page_command.ps1
 |-- install.ps1

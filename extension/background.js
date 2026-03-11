@@ -448,6 +448,31 @@ async function sendPageCommand(tabId, command) {
   })
 }
 
+async function captureAttachedTab(tabId, format = 'png') {
+  const tab = await chrome.tabs.get(tabId).catch(() => null)
+  if (!tab?.id) throw new Error('Attached tab not found for capture')
+
+  if (tab.windowId) {
+    await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {})
+  }
+  await chrome.tabs.update(tabId, { active: true }).catch(() => {})
+  await new Promise((resolve) => setTimeout(resolve, 150))
+
+  const imageDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format })
+  const pageTab = pageTabs.get(tabId)
+
+  return {
+    ok: true,
+    imageDataUrl,
+    imageFormat: format,
+    page: {
+      url: pageTab?.url || tab.url || '',
+      title: pageTab?.title || tab.title || '',
+      readyState: 'complete',
+    },
+  }
+}
+
 async function ensurePageBridge(tabId) {
   try {
     const ping = await sendPageCommand(tabId, { action: 'ping' })
@@ -772,6 +797,18 @@ async function handlePageCommand(msg) {
     })()
 
   if (!tabId) throw new Error(`No connected page tab for action ${action}`)
+
+  if (action === 'captureVisibleTab') {
+    const format = String(msg?.params?.format || 'png').trim().toLowerCase() === 'jpeg' ? 'jpeg' : 'png'
+    const response = await captureAttachedTab(tabId, format)
+    const pageTab = pageTabs.get(tabId)
+    return {
+      ...response,
+      tabId,
+      sessionId: pageTab?.sessionId || sessionId,
+      pageId: pageTab?.pageId || pageId,
+    }
+  }
 
   await ensurePageBridge(tabId)
 
