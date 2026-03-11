@@ -3,6 +3,7 @@
   "name": "Codex Browser Relay",
   "version": "0.2.12",
   "description": "Attach Codex to open web pages through a local relay for interaction and automation.",
+  "homepage_url": "https://github.com/mathiasvinicius/CodexBrowserRelay",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

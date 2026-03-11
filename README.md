@@ -179,6 +179,10 @@ If you want to inspect relay state:
 
 `%USERPROFILE%\.codex\codex-browser-relay\relay-service\runtime\relay-state.json`
 
+Project repository for updates:
+
+`https://github.com/mathiasvinicius/CodexBrowserRelay`
+
 If you want to manage the service manually:
 
 ```bat
