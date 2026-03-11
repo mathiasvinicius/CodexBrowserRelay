@@ -152,6 +152,23 @@ function dispatchMediaEvent(media, type) {
 }
 
 function findNextUdemyLectureLink() {
+  const currentItem = document.querySelector('li[class*="curriculum-item-link--is-current--"]')
+  if (currentItem instanceof HTMLElement) {
+    /** @type {Element | null} */
+    let sibling = currentItem.nextElementSibling
+    while (sibling) {
+      const trigger =
+        sibling.querySelector('button[aria-label*="Reproduzir"]') ||
+        sibling.querySelector('button[aria-label*="Iniciar"]') ||
+        sibling.querySelector('div[class*="item-link"]') ||
+        sibling.querySelector('button')
+      if (trigger instanceof HTMLElement) {
+        return trigger
+      }
+      sibling = sibling.nextElementSibling
+    }
+  }
+
   const currentHref = location.href
   const links = Array.from(document.querySelectorAll('a[href*="/learn/lecture/"]'))
     .filter((el) => el instanceof HTMLAnchorElement)
@@ -330,16 +347,16 @@ async function handlePageCommand(command) {
       }
     }
     case 'goToNextUdemyLecture': {
-      const nextLink = findNextUdemyLectureLink()
-      if (!nextLink) {
+      const nextTarget = findNextUdemyLectureLink()
+      if (!nextTarget) {
         throw new Error('could not find the next Udemy lecture link')
       }
-      nextLink.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' })
-      nextLink.click()
+      nextTarget.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' })
+      nextTarget.click()
       return {
         ok: true,
-        nextHref: nextLink.href,
-        nextText: normalizedText(nextLink.innerText || nextLink.textContent || ''),
+        nextHref: nextTarget instanceof HTMLAnchorElement ? nextTarget.href : '',
+        nextText: normalizedText(nextTarget.innerText || nextTarget.textContent || ''),
         page: getPageInfo(),
       }
     }
