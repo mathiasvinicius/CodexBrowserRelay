@@ -1,12 +1,22 @@
+param(
+  [string]$InstallUserProfile = $env:USERPROFILE
+)
+
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSCommandPath
-$codexHome = Join-Path $env:USERPROFILE '.codex'
+$codexHome = Join-Path $InstallUserProfile '.codex'
 $installRoot = Join-Path $codexHome 'codex-browser-relay'
 $extensionTarget = Join-Path $installRoot 'extension'
 $relayTarget = Join-Path $installRoot 'relay-service'
 $relayPyTarget = Join-Path $installRoot 'relay-service-py'
 $skillTarget = Join-Path (Join-Path $codexHome 'skills') 'codex-browser-relay'
+
+function Test-IsAdministrator {
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+  return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
 
 function Get-CommandPath {
   param([string]$Name)
@@ -180,6 +190,17 @@ try {
   }
 } finally {
   Pop-Location
+}
+
+if (Test-IsAdministrator) {
+  Write-Host 'Installing Python relay as a Windows service...' -ForegroundColor Cyan
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $relayPyTarget 'scripts\install-windows-service.ps1') -InstallUserProfile $InstallUserProfile
+  if ($LASTEXITCODE -ne 0) {
+    throw "install-windows-service.ps1 failed with exit code $LASTEXITCODE"
+  }
+} else {
+  Write-Host 'Admin rights not detected. Windows service installation was skipped.' -ForegroundColor Yellow
+  Write-Host 'Run install.cmd to allow the installer to request elevation when needed.' -ForegroundColor Yellow
 }
 
 Write-Host ''

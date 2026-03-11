@@ -514,7 +514,12 @@ def create_app(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, state_file: P
     return app
 
 
-async def run_relay_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, state_file: Path = DEFAULT_STATE_FILE) -> None:
+async def run_relay_server(
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    state_file: Path = DEFAULT_STATE_FILE,
+    stop_signal: Any | None = None,
+) -> None:
     if not is_loopback_host(host):
         raise RuntimeError(f"relay requires loopback host, got {host}")
 
@@ -540,6 +545,15 @@ async def run_relay_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, s
     print(f"State file: {state.metadata['stateFile']}")
 
     stop_event = asyncio.Event()
+    if stop_signal is not None:
+        async def monitor_stop_signal() -> None:
+            while not stop_event.is_set():
+                if stop_signal.is_set():
+                    stop_event.set()
+                    return
+                await asyncio.sleep(0.5)
+
+        asyncio.create_task(monitor_stop_signal())
     try:
         await stop_event.wait()
     except KeyboardInterrupt:

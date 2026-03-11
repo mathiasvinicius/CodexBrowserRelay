@@ -13,3 +13,9 @@ This updates:
 So the existing hidden VBS launcher and autostart continue to work, but the backend process becomes:
 
 `python -m relay start --host 127.0.0.1 --port 18793`
+
+If you want the Python backend to appear in `services.msc`, use:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\relay-service-py\scripts\install-windows-service.ps1
+```

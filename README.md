@@ -104,11 +104,13 @@ This installer:
 
 - checks for `Python 3.11+`, `Node.js`, and `npm`
 - tries to install missing prerequisites with `winget`
+- requests administrator rights when needed for Windows service installation
 - copies the extension to `%USERPROFILE%\.codex\codex-browser-relay\extension`
 - copies the relay to `%USERPROFILE%\.codex\codex-browser-relay\relay-service`
 - copies the skill to `%USERPROFILE%\.codex\skills\codex-browser-relay`
 - runs `npm install`
-- registers local autostart with a hidden `VBS` launcher
+- installs the Python backend package
+- installs the Python backend as a Windows service when elevated
 - starts the relay service
 
 By default, the installer prepares both backends and the installed launchers can be switched to the Python relay.
@@ -147,6 +149,14 @@ After the install finishes:
 The relay should respond on:
 
 `http://127.0.0.1:18793/`
+
+If Python service installation succeeds, it should appear in:
+
+`services.msc`
+
+With the service name:
+
+`CodexBrowserRelayPy`
 
 If you want to inspect relay state:
 
